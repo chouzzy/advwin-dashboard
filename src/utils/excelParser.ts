@@ -4,9 +4,18 @@ import type { ParsedVerba } from '../context/DataContext'
 
 const PROCESSO_NUM_RE = /^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/
 
-function parseMoney(s: string): number | undefined {
-  if (!s || String(s).trim() === '') return undefined
-  const clean = String(s).replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').trim()
+function parseMoney(s: unknown): number | undefined {
+  if (s === null || s === undefined || s === '') return undefined
+  // SheetJS returns raw numeric values — use directly
+  if (typeof s === 'number') return isNaN(s) ? undefined : s
+  const str = String(s).trim()
+  if (!str) return undefined
+  // Strip R$ symbol and spaces
+  const noSymbol = str.replace(/R\$\s*/g, '').trim()
+  // Already US decimal format (e.g. "1589.15")
+  if (/^\d+(\.\d+)?$/.test(noSymbol)) return parseFloat(noSymbol)
+  // Brazilian format: dot = thousands separator, comma = decimal
+  const clean = noSymbol.replace(/\./g, '').replace(',', '.')
   const n = parseFloat(clean)
   return isNaN(n) ? undefined : n
 }
@@ -53,9 +62,9 @@ export function parseVerbaSheet(buffer: ArrayBuffer): ParsedVerba[] {
       tipo,
       categoria: String(row[2] ?? '').trim(),
       nota: String(row[3] ?? '').trim(),
-      valorCalculado:  parseMoney(String(row[4] ?? '')),
-      valorHomologado: parseMoney(String(row[5] ?? '')),
-      valorPago:       parseMoney(String(row[6] ?? '')),
+      valorCalculado:  parseMoney(row[4]),
+      valorHomologado: parseMoney(row[5]),
+      valorPago:       parseMoney(row[6]),
     })
   }
   return result
@@ -76,8 +85,8 @@ export function parseProcessoSheet(buffer: ArrayBuffer): Partial<Processo>[] {
     return idx >= 0 ? String(row[idx] ?? '').trim() : ''
   }
   const colNum = (row: string[], name: string): number | undefined => {
-    const s = col(row, name)
-    return parseMoney(s)
+    const idx = headers.indexOf(name)
+    return idx >= 0 ? parseMoney(row[idx]) : undefined
   }
   const colInt = (row: string[], name: string): number | undefined => {
     const n = colNum(row, name)
