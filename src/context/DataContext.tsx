@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
-import type { Processo, TipoVerba } from '../types'
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import type { Processo } from '../types'
 import { processosMock } from '../data/mockData'
 
 export interface ParsedVerba {
@@ -12,7 +12,7 @@ export interface ParsedVerba {
   valorPago?: number
 }
 
-interface ImportSummary {
+export interface ImportSummary {
   processosAtualizados: number
   processosCriados: number
   verbasImportadas: number
@@ -22,126 +22,105 @@ interface ImportSummary {
 interface DataContextValue {
   processos: Processo[]
   isImported: boolean
+  isLoading: boolean
+  error: string | null
   summary: ImportSummary | null
-  setProcessos: (p: Processo[], count: number) => void
-  mergeVerbas: (parsed: ParsedVerba[]) => ImportSummary
-  reset: () => void
+  reload: () => Promise<void>
+  setProcessos: (p: Processo[]) => Promise<void>
+  mergeVerbas: (parsed: ParsedVerba[]) => Promise<ImportSummary>
+  reset: () => Promise<void>
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
-const LS_KEY = 'scc_processos_v2'
-const LS_IMPORTED = 'scc_imported_v2'
 
-function mapCategoria(cat: string): TipoVerba {
-  const c = cat.trim().toLowerCase()
-  if (c.includes('salarial')) return 'verba salarial'
-  if (c.includes('indenizat')) return 'verba indenizatória'
-  if (c.includes('honorár') && !c.includes('contábil') && !c.includes('médico')) return 'Honorários'
-  return 'Encargos'
-}
-
-function createSkeleton(numero: string, verbas: ParsedVerba[]): Processo {
-  return {
-    id: numero,
-    numero,
-    reclamante: 'Não informado',
-    advogadoReclamante: 'Não informado',
-    vara: 'Não informado',
-    comarca: 'Não informado',
-    tribunal: 'Não informado',
-    fase: 'Inicial',
-    status: 'Ativo',
-    risco: 'Possível',
-    dataDistribuicao: new Date().toISOString().slice(0, 10),
-    ultimoMovimento: 'Importado via planilha',
-    andamentos: [],
-    audiencias: [],
-    verbas: verbas.map(v => ({
-      tipo: v.tipo,
-      descricao: mapCategoria(v.categoria),
-      nota: v.nota || undefined,
-      valorCalculado: v.valorCalculado,
-      valorHomologado: v.valorHomologado,
-      valorPago: v.valorPago,
-    })),
+async function apiFetch(path: string, opts?: RequestInit) {
+  const res = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? `HTTP ${res.status}`)
   }
-}
-
-function loadSaved(): Processo[] {
-  try {
-    const s = localStorage.getItem(LS_KEY)
-    return s ? JSON.parse(s) : processosMock
-  } catch { return processosMock }
+  return res.json()
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [processos, setProcessosState] = useState<Processo[]>(loadSaved)
-  const [isImported, setIsImported]    = useState(() => localStorage.getItem(LS_IMPORTED) === 'true')
+  const [processos, setProcessosState] = useState<Processo[]>(processosMock)
+  const [isImported, setIsImported]    = useState(false)
+  const [isLoading, setIsLoading]      = useState(true)
+  const [error, setError]              = useState<string | null>(null)
   const [summary, setSummary]          = useState<ImportSummary | null>(null)
 
-  const persist = (p: Processo[]) => {
-    localStorage.setItem(LS_KEY, JSON.stringify(p))
-    localStorage.setItem(LS_IMPORTED, 'true')
-    setIsImported(true)
-    setProcessosState(p)
-  }
-
-  const setProcessos = (p: Processo[], count: number) => {
-    persist(p)
-    setSummary({ processosImportados: count, processosAtualizados: 0, processosCriados: count, verbasImportadas: 0 })
-  }
-
-  const mergeVerbas = (parsed: ParsedVerba[]): ImportSummary => {
-    const byNum = new Map<string, ParsedVerba[]>()
-    for (const v of parsed) {
-      const k = v.processoNumero
-      if (!byNum.has(k)) byNum.set(k, [])
-      byNum.get(k)!.push(v)
-    }
-
-    let atualizados = 0, criados = 0
-    const updated = [...processos]
-
-    byNum.forEach((verbas, numero) => {
-      const idx = updated.findIndex(p => p.numero === numero)
-      const mappedVerbas = verbas.map(v => ({
-        tipo: v.tipo,
-        descricao: mapCategoria(v.categoria),
-        nota: v.nota || undefined,
-        valorCalculado: v.valorCalculado,
-        valorHomologado: v.valorHomologado,
-        valorPago: v.valorPago,
-      }))
-      if (idx >= 0) {
-        updated[idx] = { ...updated[idx], verbas: mappedVerbas }
-        atualizados++
+  const reload = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const { processos: data, isEmpty } = await apiFetch('/api/processos')
+      if (isEmpty) {
+        setProcessosState(processosMock)
+        setIsImported(false)
       } else {
-        updated.push(createSkeleton(numero, verbas))
-        criados++
+        setProcessosState(data as Processo[])
+        setIsImported(true)
       }
-    })
+    } catch (e: any) {
+      setError(e.message)
+      // fallback to mock data so UI still renders
+      setProcessosState(processosMock)
+      setIsImported(false)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
-    persist(updated)
+  useEffect(() => { reload() }, [reload])
+
+  const setProcessos = async (p: Processo[]) => {
+    setIsLoading(true)
+    try {
+      await apiFetch('/api/processos/import', {
+        method: 'POST',
+        body: JSON.stringify({ processos: p }),
+      })
+      setProcessosState(p)
+      setIsImported(true)
+      setSummary({ processosImportados: p.length, processosAtualizados: 0, processosCriados: p.length, verbasImportadas: 0 })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const mergeVerbas = async (parsed: ParsedVerba[]): Promise<ImportSummary> => {
+    const data = await apiFetch('/api/verbas/import', {
+      method: 'POST',
+      body: JSON.stringify({ verbas: parsed }),
+    })
     const result: ImportSummary = {
-      processosAtualizados: atualizados,
-      processosCriados: criados,
-      verbasImportadas: parsed.length,
+      verbasImportadas: data.verbasImportadas,
+      processosAtualizados: data.processosAtualizados,
+      processosCriados: data.processosCriados,
       processosImportados: 0,
     }
     setSummary(result)
+    await reload()
     return result
   }
 
-  const reset = () => {
-    setProcessosState(processosMock)
-    setIsImported(false)
-    setSummary(null)
-    localStorage.removeItem(LS_KEY)
-    localStorage.removeItem(LS_IMPORTED)
+  const reset = async () => {
+    setIsLoading(true)
+    try {
+      await apiFetch('/api/processos', { method: 'DELETE' })
+      setProcessosState(processosMock)
+      setIsImported(false)
+      setSummary(null)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
-    <DataContext.Provider value={{ processos, isImported, summary, setProcessos, mergeVerbas, reset }}>
+    <DataContext.Provider value={{ processos, isImported, isLoading, error, summary, reload, setProcessos, mergeVerbas, reset }}>
       {children}
     </DataContext.Provider>
   )

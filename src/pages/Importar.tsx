@@ -17,7 +17,7 @@ interface ZoneState {
 const defaultZone: ZoneState = { state: 'idle', fileName: '', message: '' }
 
 export default function Importar() {
-  const { processos, isImported, summary, setProcessos, mergeVerbas, reset } = useData()
+  const { processos, isImported, isLoading, summary, setProcessos, mergeVerbas, reset } = useData()
   const [processoZone, setProcessoZone] = useState<ZoneState>(defaultZone)
   const [verbaZone, setVerbaZone]       = useState<ZoneState>(defaultZone)
   const [showReset, setShowReset]       = useState(false)
@@ -57,14 +57,14 @@ export default function Importar() {
           ...p,
         }))
 
-        setProcessos(full, full.length)
+        await setProcessos(full)
         setZone({ state: 'success', fileName: file.name, message: `${full.length} processo(s) importado(s) com sucesso.` })
 
       } else {
         const parsed = parseVerbaSheet(buffer)
         if (!parsed.length) throw new Error('Nenhuma verba encontrada. Verifique se a planilha segue o formato correto.')
 
-        const result = mergeVerbas(parsed)
+        const result = await mergeVerbas(parsed)
         const msg = [
           `${result.verbasImportadas} verba(s) importada(s).`,
           result.processosAtualizados > 0 ? `${result.processosAtualizados} processo(s) atualizado(s).` : '',
