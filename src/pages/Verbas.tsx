@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { processosMock, formatCurrency } from '../data/mockData'
+import { formatCurrency } from '../data/mockData'
+import { useData } from '../context/DataContext'
 import Header from '../components/Layout/Header'
 import { T } from '../theme'
 import {
@@ -35,6 +36,7 @@ type FilterTipo = TipoVerba | ''
 
 export default function Verbas() {
   const navigate = useNavigate()
+  const { processos } = useData()
   const [filterTipo,    setFilterTipo]    = useState<FilterTipo>('')
   const [filterRisco,   setFilterRisco]   = useState('')
   const [filterUnidade, setFilterUnidade] = useState('')
@@ -42,7 +44,7 @@ export default function Verbas() {
 
   // Todas as verbas de todos os processos (flat)
   const todasVerbas = useMemo(() => {
-    return processosMock.flatMap(p =>
+    return processos.flatMap(p =>
       p.verbas
         .filter(v => !filterTipo || v.descricao === filterTipo)
         .filter(() => !filterRisco || p.risco === filterRisco)
@@ -81,7 +83,7 @@ export default function Verbas() {
 
   // Verbas por processo (totais)
   const porProcesso = useMemo(() => {
-    return processosMock
+    return processos
       .filter(p => !filterRisco || p.risco === filterRisco)
       .filter(p => !filterUnidade || p.unidade === filterUnidade)
       .map(p => ({

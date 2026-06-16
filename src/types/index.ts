@@ -23,6 +23,7 @@ export type Unidade = 'ZS' | 'ZR' | 'ZT'
 export interface Verba {
   tipo: string              // ex: "ADICIONAL DE INSALUBRIDADE"
   descricao: TipoVerba      // ex: "verba salarial"
+  nota?: string             // ex: "NR-15" (col Descrição da planilha)
   valorCalculado?: number
   valorHomologado?: number
   valorPago?: number

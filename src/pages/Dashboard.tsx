@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { processosMock, formatCurrency, formatDate, riscoColor, faseColor } from '../data/mockData'
+import { formatCurrency, formatDate, riscoColor, faseColor } from '../data/mockData'
+import { useData } from '../context/DataContext'
 import Header from '../components/Layout/Header'
 import { T } from '../theme'
 import {
@@ -40,33 +41,34 @@ function KpiCard({ label, value, sub, delta }: { label: string; value: string | 
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { processos } = useData()
 
-  const ativos      = processosMock.filter(p => p.status === 'Ativo')
-  const encerrados  = processosMock.filter(p => p.status === 'Encerrado')
-  const audiencias  = processosMock.flatMap(p => p.audiencias).filter(a => a.status === 'Agendada')
+  const ativos      = processos.filter(p => p.status === 'Ativo')
+  const encerrados  = processos.filter(p => p.status === 'Encerrado')
+  const audiencias  = processos.flatMap(p => p.audiencias).filter(a => a.status === 'Agendada')
 
   // Próximos eventos
-  const proximosEventos = processosMock
+  const proximosEventos = processos
     .filter(p => p.proximoEventoData)
     .sort((a, b) => a.proximoEventoData! > b.proximoEventoData! ? 1 : -1)
     .slice(0, 6)
 
   // Financeiro — soma de valorContingencia
-  const totalCausa       = processosMock.reduce((s, p) => s + (p.valorCausa || 0), 0)
-  const totalContingencia = processosMock.reduce((s, p) => s + (p.valorContingencia || 0), 0)
+  const totalCausa       = processos.reduce((s, p) => s + (p.valorCausa || 0), 0)
+  const totalContingencia = processos.reduce((s, p) => s + (p.valorContingencia || 0), 0)
 
   // Verbas calculadas total
-  const totalVerbaCalc = processosMock.flatMap(p => p.verbas).reduce((s, v) => s + (v.valorCalculado || 0), 0)
+  const totalVerbaCalc = processos.flatMap(p => p.verbas).reduce((s, v) => s + (v.valorCalculado || 0), 0)
 
   // Distribuições
   const faseData = ['Inicial','Recursal','Liquidação','Execução','Embargos','Pagamento de Execução','Pagamento de Acordo','Arquivado']
-    .map(f => ({ name: f, value: processosMock.filter(p => p.fase === f).length }))
+    .map(f => ({ name: f, value: processos.filter(p => p.fase === f).length }))
     .filter(d => d.value > 0)
 
   const riscoBarData = [
-    { name: 'Provável', value: processosMock.filter(p => p.risco === 'Provável').length },
-    { name: 'Possível', value: processosMock.filter(p => p.risco === 'Possível').length },
-    { name: 'Remoto',   value: processosMock.filter(p => p.risco === 'Remoto').length },
+    { name: 'Provável', value: processos.filter(p => p.risco === 'Provável').length },
+    { name: 'Possível', value: processos.filter(p => p.risco === 'Possível').length },
+    { name: 'Remoto',   value: processos.filter(p => p.risco === 'Remoto').length },
   ]
 
   const evolucao = [
@@ -85,7 +87,7 @@ export default function Dashboard() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiCard label="Processos Ativos"  value={ativos.length}     sub={`de ${processosMock.length} total`} />
+          <KpiCard label="Processos Ativos"  value={ativos.length}     sub={`de ${processos.length} total`} />
           <KpiCard label="Audiências Agendadas" value={audiencias.length} sub="próximos eventos" />
           <KpiCard label="Encerrados"        value={encerrados.length} sub="concluídos" />
           <KpiCard label="Próximos Eventos"  value={proximosEventos.length} sub="agendados" delta="monitorar" />
@@ -236,7 +238,7 @@ export default function Dashboard() {
                 verbas <ChevronRight size={11} />
               </button>
             </div>
-            {processosMock
+            {processos
               .filter(p => p.status === 'Ativo' && p.valorContingencia)
               .sort((a, b) => (b.valorContingencia || 0) - (a.valorContingencia || 0))
               .slice(0, 6)

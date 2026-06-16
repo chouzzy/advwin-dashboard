@@ -5,10 +5,13 @@ import Dashboard from './pages/Dashboard'
 import Processos from './pages/Processos'
 import ProcessoDetalhe from './pages/ProcessoDetalhe'
 import Verbas from './pages/Verbas'
+import Importar from './pages/Importar'
+import { DataProvider } from './context/DataContext'
 import { T } from './theme'
 
 function App() {
   return (
+    <DataProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -18,12 +21,14 @@ function App() {
           <Route path="processos" element={<Processos />} />
           <Route path="processos/:id" element={<ProcessoDetalhe />} />
           <Route path="verbas" element={<Verbas />} />
+          <Route path="importar" element={<Importar />} />
           <Route path="notificacoes" element={<Notificacoes />} />
           <Route path="configuracoes" element={<Placeholder title="Configurações" />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
+    </DataProvider>
   )
 }
 

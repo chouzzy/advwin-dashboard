@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { processosMock, formatCurrency, formatDate, riscoColor, faseColor } from '../data/mockData'
+import { formatCurrency, formatDate, riscoColor, faseColor } from '../data/mockData'
+import { useData } from '../context/DataContext'
 import Header from '../components/Layout/Header'
 import { T } from '../theme'
 import { ArrowLeft } from 'lucide-react'
@@ -53,9 +54,10 @@ const VERBA_COLORS: Record<string, string> = {
 export default function ProcessoDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { processos } = useData()
   const [tab, setTab] = useState<Tab>('dados')
 
-  const p = processosMock.find(x => x.id === id)
+  const p = processos.find(x => x.id === id)
   if (!p) return (
     <div className="p-8 text-center">
       <p className="text-xs" style={{ color: T.t3 }}>Processo não encontrado.</p>

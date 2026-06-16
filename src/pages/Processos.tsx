@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { processosMock, formatCurrency, formatDate, riscoColor, faseColor } from '../data/mockData'
+import { formatCurrency, formatDate, riscoColor, faseColor } from '../data/mockData'
+import { useData } from '../context/DataContext'
 import Header from '../components/Layout/Header'
 import { T } from '../theme'
 import { Search, ChevronRight, ArrowUpDown, X, SlidersHorizontal } from 'lucide-react'
@@ -14,6 +15,7 @@ const STATUS: ProcessoStatus[] = ['Ativo','Arquivado','Encerrado']
 
 export default function Processos() {
   const navigate = useNavigate()
+  const { processos } = useData()
   const [search, setSearch]             = useState('')
   const [filterFase, setFilterFase]     = useState<ProcessoFase | ''>('')
   const [filterStatus, setFilterStatus] = useState<ProcessoStatus | ''>('')
@@ -24,7 +26,7 @@ export default function Processos() {
   const [showFilters, setShowFilters]   = useState(false)
 
   const filtrados = useMemo(() => {
-    let list = [...processosMock]
+    let list = [...processos]
     if (search) {
       const q = search.toLowerCase()
       list = list.filter(p =>
@@ -226,7 +228,7 @@ export default function Processos() {
             )}
           </div>
           <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: `1px solid ${T.b1}`, background: T.s2 }}>
-            <p className="text-xs" style={{ color: T.t3 }}>{filtrados.length} de {processosMock.length} processos</p>
+            <p className="text-xs" style={{ color: T.t3 }}>{filtrados.length} de {processos.length} processos</p>
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: T.t3 }}>Contingência filtrada:</span>
               <span className="text-xs font-semibold" style={{ color: T.copper }}>{formatCurrency(totalContingencia)}</span>

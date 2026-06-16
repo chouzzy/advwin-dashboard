@@ -1,16 +1,19 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FileText, DollarSign, Bell, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, FileText, DollarSign, Bell, Settings, LogOut, Upload } from 'lucide-react'
 import { T } from '../../theme'
+import { useData } from '../../context/DataContext'
 
 const navItems = [
   { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/processos',    icon: FileText,         label: 'Processos' },
   { to: '/verbas',       icon: DollarSign,       label: 'Verbas' },
+  { to: '/importar',     icon: Upload,           label: 'Importar' },
   { to: '/notificacoes', icon: Bell,             label: 'Notificações', badge: 3 },
 ]
 
 export default function Sidebar() {
   const navigate = useNavigate()
+  const { isImported, processos } = useData()
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-56 flex flex-col z-40"
@@ -35,8 +38,8 @@ export default function Sidebar() {
           Construtora<br />Meridional Ltda
         </p>
         <div className="flex items-center gap-1.5 mt-3">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: T.copper }}></div>
-          <p className="text-xs" style={{ color: T.t2 }}>10 processos ativos</p>
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: isImported ? T.green : T.copper }}></div>
+          <p className="text-xs" style={{ color: T.t2 }}>{processos.length} processo{processos.length !== 1 ? 's' : ''} {isImported ? 'importados' : 'demo'}</p>
         </div>
       </div>
 
