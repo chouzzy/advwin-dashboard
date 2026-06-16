@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/predev.mjs",
     "dev": "concurrently -k -n \"API,Vite\" -c \"cyan,yellow\" \"node --env-file=.env.local dev-server.js\" \"vite\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
