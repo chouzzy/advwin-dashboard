@@ -58,18 +58,25 @@ export default async function handler(req, res) {
       })
     }
 
+    // Ensure unique index to prevent duplicate skeleton processes
+    await col.createIndex({ numero: 1 }, { unique: true, background: true }).catch(() => {})
+
     let atualizados = 0
     let criados = 0
 
     for (const [numero, mappedVerbas] of byNum) {
-      const existing = await col.findOne({ numero })
-      if (existing) {
-        await col.updateOne({ numero }, { $set: { verbas: mappedVerbas } })
-        atualizados++
-      } else {
-        await col.insertOne(skeletonProcesso(numero, mappedVerbas))
-        criados++
-      }
+      const skeleton = skeletonProcesso(numero, mappedVerbas)
+      const { verbas: _v, ultimoMovimento: _u, ...insertFields } = skeleton
+      const result = await col.updateOne(
+        { numero },
+        {
+          $set: { verbas: mappedVerbas, ultimoMovimento: 'Importado via planilha' },
+          $setOnInsert: insertFields,
+        },
+        { upsert: true }
+      )
+      if (result.upsertedCount > 0) criados++
+      else atualizados++
     }
 
     res.status(200).json({

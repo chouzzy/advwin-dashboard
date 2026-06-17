@@ -17,7 +17,7 @@ interface ZoneState {
 const defaultZone: ZoneState = { state: 'idle', fileName: '', message: '' }
 
 export default function Importar() {
-  const { processos, isImported, isLoading, summary, setProcessos, mergeVerbas, reset } = useData()
+  const { processos, isImported, summary, setProcessos, mergeVerbas, reset } = useData()
   const [processoZone, setProcessoZone] = useState<ZoneState>(defaultZone)
   const [verbaZone, setVerbaZone]       = useState<ZoneState>(defaultZone)
   const [showReset, setShowReset]       = useState(false)

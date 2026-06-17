@@ -16,8 +16,10 @@ export default async function handler(req, res) {
     const client = await clientPromise
     const col = client.db(DB_NAME).collection('processos')
 
+    await col.createIndex({ numero: 1 }, { unique: true, background: true }).catch(() => {})
     await col.deleteMany({})
-    await col.insertMany(processos)
+    const deduped = Array.from(new Map(processos.map(p => [p.numero, p])).values())
+    await col.insertMany(deduped)
 
     res.status(200).json({ ok: true, count: processos.length })
   } catch (e) {

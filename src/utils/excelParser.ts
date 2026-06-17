@@ -94,10 +94,13 @@ export function parseProcessoSheet(buffer: ArrayBuffer): Partial<Processo>[] {
   }
 
   const result: Partial<Processo>[] = []
+  const seen = new Set<string>()
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i].map(c => String(c))
     const numero = row[0]?.trim()
-    if (!numero || numero.startsWith('-') || numero.startsWith('---')) continue
+    if (!PROCESSO_NUM_RE.test(numero)) continue
+    if (seen.has(numero)) continue
+    seen.add(numero)
 
     result.push({
       numero,
